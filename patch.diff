@@ -1,4 +1,4 @@
-*** Begin Patch *** Add File: sql/schema.sql +-- Schema for gametrade-hub (profiles, listings, listings_images, orders, payments) +-- Run in Supabase SQL editor. No secrets required. +BEGIN; + +-- profiles table (public) +CREATE TABLE IF NOT EXISTS public.profiles (
+-----BEGIN PATCH_DIFF----- *** Please save everything below into patch.diff (unified git format) *** *** File: sql/schema.sql *** Add File Mode: 100644 +-- Schema for gametrade-hub (profiles, listings, listings_images, orders, payments) +-- Run in Supabase SQL editor. No secrets required. +BEGIN; + +-- profiles table (public) +CREATE TABLE IF NOT EXISTS public.profiles (
 
 id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
 username text UNIQUE,
