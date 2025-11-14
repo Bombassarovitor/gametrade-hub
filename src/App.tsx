@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Blog from "./pages/Blog";
 import CreateBlogPost from "./pages/CreateBlogPost";
 import Suggestions from "./pages/Suggestions";
+import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import Categories from "./pages/Categories";

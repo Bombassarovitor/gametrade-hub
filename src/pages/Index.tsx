@@ -20,6 +20,8 @@ import {
 const Index = () => {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
 
   useEffect(() => {
     const fetchListings = async () => {
