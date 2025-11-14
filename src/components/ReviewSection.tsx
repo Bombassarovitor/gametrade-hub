@@ -37,11 +37,13 @@ export const ReviewSection = ({ type, targetId, currentUserId }: ReviewSectionPr
 
   const fetchReviews = async () => {
     try {
-      const { data, error } = await supabase
+      const query = supabase
         .from(tableName)
         .select("id, rating, comment, created_at")
         .eq(targetColumn, targetId)
         .order("created_at", { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setReviews(data || []);

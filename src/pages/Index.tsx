@@ -136,15 +136,18 @@ const Index = () => {
       {/* Featured Products */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold">Anúncios Recentes</h2>
-              <p className="mt-2 text-muted-foreground">
-                {listings.length > 0 
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold">
+              {searchQuery ? `Resultados para "${searchQuery}"` : "Anúncios Recentes"}
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              {searchQuery 
+                ? `${listings.length} ${listings.length === 1 ? "resultado encontrado" : "resultados encontrados"}`
+                : listings.length > 0 
                   ? "Confira os anúncios mais recentes" 
                   : "Seja o primeiro a criar um anúncio!"}
-              </p>
-            </div>
+            </p>
+          </div>
             {listings.length > 0 && (
               <Link to="/categories">
                 <Button variant="ghost">

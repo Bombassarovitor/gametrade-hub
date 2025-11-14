@@ -159,23 +159,41 @@ const Navbar = () => {
                 Sugestões
               </Button>
             </Link>
-            <Link to="/how-to-sell" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
-                Como Vender
-              </Button>
-            </Link>
-            <Link to="/dashboard/buyer" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Minhas Compras
-              </Button>
-            </Link>
-            <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="default" className="w-full">
-                <User className="mr-2 h-4 w-4" />
-                Entrar
-              </Button>
-            </Link>
+            {user && (
+              <Link to="/listings/create" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start">
+                  Criar Anúncio
+                </Button>
+              </Link>
+            )}
+            {user ? (
+              <>
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <User className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="default" className="w-full">
+                  <User className="mr-2 h-4 w-4" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       )}
