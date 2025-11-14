@@ -1,4 +1,4 @@
-*** Begin Patch *** Add File: sql/schema.sql +-- Schema for gametrade-hub (profiles, listings, listings_images, orders, payments) +-- Run in Supabase SQL editor. No secrets required. +BEGIN; + +-- profiles table (public) +CREATE TABLE IF NOT EXISTS public.profiles (
+-----BEGIN PATCH_DIFF----- *** Please save everything below into patch.diff (unified git format) *** *** File: sql/schema.sql *** Add File Mode: 100644 +-- Schema for gametrade-hub (profiles, listings, listings_images, orders, payments) +-- Run in Supabase SQL editor. No secrets required. +BEGIN; + +-- profiles table (public) +CREATE TABLE IF NOT EXISTS public.profiles (
 
 id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
 username text UNIQUE,
@@ -97,7 +97,7 @@ FOR INSERT TO authenticated WITH CHECK (buyer_id = (SELECT auth.uid()));
 FOR SELECT TO authenticated USING (
 EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND (o.buyer_id = (SELECT auth.uid()) OR EXISTS (SELECT 1 FROM public.listings l WHERE l.id = o.listing_id AND l.owner_id = (SELECT auth.uid())))) OR public.is_admin()
 );
-+COMMIT; + *** End Patch *** Begin Patch *** Add File: edge-functions/onboard-seller/index.ts +// Edge Function: onboard-seller +// Creates a Stripe Connect account link for onboarding a seller. +// Expects JSON body: { country: 'US', email: 'seller@example.com [blocked]', refresh_url, return_url } +// Requires STRIPE_SECRET and SUPABASE_SERVICE_ROLE_KEY set as secrets. +console.info('onboard-seller function starting'); +Deno.serve(async (req: Request) => {***
++COMMIT; + *** End File: sql/schema.sql *** File: edge-functions/onboard-seller/index.ts *** Add File Mode: 100644 +// Edge Function: onboard-seller +// Creates a Stripe Connect account link for onboarding a seller. +// Expects JSON body: { country: 'US', email: 'seller@example.com [blocked]', refresh_url, return_url } +// Requires STRIPE_SECRET and SUPABASE_SERVICE_ROLE_KEY set as secrets. +console.info('onboard-seller function starting'); +Deno.serve(async (req: Request) => {***
 
 try {
 const body = await req.json();
@@ -130,7 +130,7 @@ return new Response(JSON.stringify({ account, link }), { headers: { 'Content-Typ
 console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +});
-*** End Patch *** Begin Patch *** Add File: edge-functions/create-payment-intent/index.ts +// Edge Function: create-payment-intent +// Creates a Stripe payment intent for a listing purchase. +console.info('create-payment-intent starting'); +Deno.serve(async (req: Request) => {***
+*** End File: edge-functions/onboard-seller/index.ts *** File: edge-functions/create-payment-intent/index.ts *** Add File Mode: 100644 +// Edge Function: create-payment-intent +// Creates a Stripe payment intent for a listing purchase. +console.info('create-payment-intent starting'); +Deno.serve(async (req: Request) => {***
 
 try {
 const stripeSecret = Deno.env.get('STRIPE_SECRET');
@@ -153,7 +153,7 @@ return new Response(JSON.stringify(pi), { headers: { 'Content-Type': 'applicatio
 console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +}); +*
-*** End Patch *** Begin Patch *** Add File: edge-functions/webhook/index.ts +// Edge Function: webhook +// Receives Stripe webhook events. Verifies signature using STRIPE_WEBHOOK_SECRET +console.info('webhook function starting'); +Deno.serve(async (req: Request) => {***
+*** End File: edge-functions/create-payment-intent/index.ts *** File: edge-functions/webhook/index.ts *** Add File Mode: 100644 +// Edge Function: webhook +// Receives Stripe webhook events. Verifies signature using STRIPE_WEBHOOK_SECRET +console.info('webhook function starting'); +Deno.serve(async (req: Request) => {***
 
 const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 const payload = await req.text();
@@ -168,7 +168,7 @@ return new Response(JSON.stringify({ received: true }), { status: 200 });
 console.error('webhook parse error', err);
 return new Response(JSON.stringify({ error: 'invalid payload' }), { status: 400 });
 } +});
-*** End Patch *** Begin Patch *** Add File: edge-functions/create-transfer/index.ts +// Edge Function: create-transfer +// Creates a transfer to a connected account (Stripe Connect) +console.info('create-transfer starting'); +Deno.serve(async (req: Request) => {***
+*** End File: edge-functions/webhook/index.ts *** File: edge-functions/create-transfer/index.ts *** Add File Mode: 100644 +// Edge Function: create-transfer +// Creates a transfer to a connected account (Stripe Connect) +console.info('create-transfer starting'); +Deno.serve(async (req: Request) => {***
 
 try {
 const stripeSecret = Deno.env.get('STRIPE_SECRET');
@@ -190,6 +190,29 @@ return new Response(JSON.stringify(tr), { headers: { 'Content-Type': 'applicatio
 console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +}); +*
-*** End Patch *** Begin Patch *** Add File: .env.example +VITE_SUPABASE_URL=your_supabase_url +VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key +SUPABASE_SERVICE_ROLE_KEY=your_service_role_key +STRIPE_SECRET=sk_test_xxx +STRIPE_WEBHOOK_SECRET=whsec_xxx + *** End Patch *** Begin Patch *** Add File: README-changes.txt +Instructions after applying patch: + +1) Apply SQL
+*** End File: edge-functions/create-transfer/index.ts *** File: .env.example *** Add File Mode: 100644 +VITE_SUPABASE_URL=your_supabase_url +VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key +SUPABASE_SERVICE_ROLE_KEY=your_service_role_key +STRIPE_SECRET=sk_test_xxx +STRIPE_WEBHOOK_SECRET=whsec_xxx + *** End File: .env.example *** File: README-changes.txt *** Add File Mode: 100644 +Instructions after applying patch: + +1) Apply SQL
 
 Open Supabase Dashboard -> SQL editor -> run sql/schema.sql
++2) Create Storage bucket
+
+Create bucket named: public-listings
+Make it public or configure RLS and use signed URLs for uploads
++3) Deploy Edge Functions
+
+Install supabase CLI and login
+Run: supabase functions deploy onboard-seller --project-ref YOUR_PROJECT_REF
+Repeat for create-payment-intent, webhook, create-transfer
+Set secrets via: supabase secrets set STRIPE_SECRET=... STRIPE_WEBHOOK_SECRET=... --project-ref YOUR_PROJECT_REF
++4) Git commands to apply patch and create PR:
+
+git checkout -b feature/supabase-integration
+git apply --index patch.diff
+git add .
+git commit -m "Add Supabase schema, Edge Functions and integration examples"
+git push --set-upstream origin feature/supabase-integration
+Open PR on GitHub from feature/supabase-integration -> upstream main
++5) Testing Edge Functions
+
+Example curl:
+curl -X POST https:///onboard-seller -H "Content-Type: application/json" -d '{"country":"US","email":"seller@example.com [blocked]","refresh_url":"https://example.com/refresh","return_url":"https://example.com/return"}'
++Security note: Do not commit secrets. Set them in Supabase secrets or CI. + *** End File: README-changes.txt -----END PATCH_DIFF-----***
