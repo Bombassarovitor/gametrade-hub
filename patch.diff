@@ -153,7 +153,7 @@ return new Response(JSON.stringify(pi), { headers: { 'Content-Type': 'applicatio
 console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +}); +*
-*** End Patch *** Begin Patch *** Add File: edge-functions/webhook/index.ts +// Edge Function: webhook +// Receives Stripe webhook events. Verifies signature using STRIPE_WEBHOOK_SECRET +console.info('webhook function starting'); +Deno.serve(async (req: Request) => {***
+*** End File: edge-functions/create-payment-intent/index.ts *** File: edge-functions/webhook/index.ts *** Add File Mode: 100644 +// Edge Function: webhook +// Receives Stripe webhook events. Verifies signature using STRIPE_WEBHOOK_SECRET +console.info('webhook function starting'); +Deno.serve(async (req: Request) => {***
 
 const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 const payload = await req.text();
