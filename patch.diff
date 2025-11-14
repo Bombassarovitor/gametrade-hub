@@ -191,3 +191,21 @@ console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +}); +*
 *** End File: edge-functions/create-transfer/index.ts *** File: .env.example *** Add File Mode: 100644 +VITE_SUPABASE_URL=your_supabase_url +VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key +SUPABASE_SERVICE_ROLE_KEY=your_service_role_key +STRIPE_SECRET=sk_test_xxx +STRIPE_WEBHOOK_SECRET=whsec_xxx + *** End File: .env.example *** File: README-changes.txt *** Add File Mode: 100644 +Instructions after applying patch: + +1) Apply SQL
+
+Open Supabase Dashboard -> SQL editor -> run sql/schema.sql
++2) Create Storage bucket
+
+Create bucket named: public-listings
+Make it public or configure RLS and use signed URLs for uploads
++3) Deploy Edge Functions
+
+Install supabase CLI and login
+Run: supabase functions deploy onboard-seller --project-ref YOUR_PROJECT_REF
+Repeat for create-payment-intent, webhook, create-transfer
+Set secrets via: supabase secrets set STRIPE_SECRET=... STRIPE_WEBHOOK_SECRET=... --project-ref YOUR_PROJECT_REF
++4) Git commands to apply patch and create PR:
+
+git checkout -b feature/supabase-integration
+git apply --index patch.diff
+git add .
+git commit -m "Add Supabase schema, Edge Functions and integration examples"
