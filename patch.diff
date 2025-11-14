@@ -209,3 +209,10 @@ git checkout -b feature/supabase-integration
 git apply --index patch.diff
 git add .
 git commit -m "Add Supabase schema, Edge Functions and integration examples"
+git push --set-upstream origin feature/supabase-integration
+Open PR on GitHub from feature/supabase-integration -> upstream main
++5) Testing Edge Functions
+
+Example curl:
+curl -X POST https:///onboard-seller -H "Content-Type: application/json" -d '{"country":"US","email":"seller@example.com [blocked]","refresh_url":"https://example.com/refresh","return_url":"https://example.com/return"}'
++Security note: Do not commit secrets. Set them in Supabase secrets or CI. + *** End File: README-changes.txt -----END PATCH_DIFF-----***
