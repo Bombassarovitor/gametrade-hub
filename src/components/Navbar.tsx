@@ -1,11 +1,46 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ShoppingCart, User, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -23,14 +58,18 @@ const Navbar = () => {
 
           {/* Search Bar */}
           <div className="hidden flex-1 max-w-xl mx-8 md:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar jogos, itens, contas..."
-                className="pl-10"
-              />
-            </div>
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar jogos, itens, contas..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </form>
           </div>
 
           {/* Desktop Navigation */}
@@ -41,21 +80,39 @@ const Navbar = () => {
             <Link to="/suggestions">
               <Button variant="ghost">Sugestões</Button>
             </Link>
-            <Link to="/how-to-sell">
-              <Button variant="ghost">Como Vender</Button>
-            </Link>
-            <Link to="/dashboard/buyer">
-              <Button variant="ghost">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Compras
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button variant="default">
-                <User className="mr-2 h-4 w-4" />
-                Entrar
-              </Button>
-            </Link>
+            {user && (
+              <Link to="/listings/create">
+                <Button variant="ghost">Criar Anúncio</Button>
+              </Link>
+            )}
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="default">
+                    <User className="mr-2 h-4 w-4" />
+                    Minha Conta
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="w-full cursor-pointer">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="default">
+                  <User className="mr-2 h-4 w-4" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -73,14 +130,18 @@ const Navbar = () => {
 
         {/* Mobile Search */}
         <div className="pb-4 md:hidden">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar..."
-              className="pl-10"
-            />
-          </div>
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </form>
         </div>
       </div>
 
@@ -98,23 +159,41 @@ const Navbar = () => {
                 Sugestões
               </Button>
             </Link>
-            <Link to="/how-to-sell" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
-                Como Vender
-              </Button>
-            </Link>
-            <Link to="/dashboard/buyer" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Minhas Compras
-              </Button>
-            </Link>
-            <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="default" className="w-full">
-                <User className="mr-2 h-4 w-4" />
-                Entrar
-              </Button>
-            </Link>
+            {user && (
+              <Link to="/listings/create" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start">
+                  Criar Anúncio
+                </Button>
+              </Link>
+            )}
+            {user ? (
+              <>
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <User className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="default" className="w-full">
+                  <User className="mr-2 h-4 w-4" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       )}

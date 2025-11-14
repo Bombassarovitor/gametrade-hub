@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Blog from "./pages/Blog";
 import CreateBlogPost from "./pages/CreateBlogPost";
 import Suggestions from "./pages/Suggestions";
+import CreateListing from "./pages/CreateListing";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import Categories from "./pages/Categories";
@@ -39,11 +40,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/how-to-sell" element={<HowToSell />} />
-          <Route path="/dashboard/buyer" element={<Dashboard />} />
-          <Route path="/dashboard/seller" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/create" element={<CreateBlogPost />} />
           <Route path="/suggestions" element={<Suggestions />} />
+          <Route path="/listings/create" element={<CreateListing />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/help" element={<Help />} />

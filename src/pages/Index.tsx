@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
+import Navbar from "@/components/Navbar";
 import {
   Gamepad2,
   Trophy,
@@ -20,11 +21,18 @@ import {
 const Index = () => {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
 
   useEffect(() => {
-    const fetchListings = async () => {
-      const { data, error } = await supabase
-        .from('listings')
+    fetchListings();
+  }, [searchQuery]);
+
+  const fetchListings = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("listings")
         .select(`
           *,
           profiles:user_id (
@@ -32,18 +40,26 @@ const Index = () => {
             avatar_url
           )
         `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(8);
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (searchQuery) {
+        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,game_category.ilike.%${searchQuery}%`);
+      } else {
+        query = query.limit(8);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         setListings(data);
       }
+    } catch (error) {
+      console.error("Erro ao buscar anúncios:", error);
+    } finally {
       setLoading(false);
-    };
-
-    fetchListings();
-  }, []);
+    }
+  };
 
   const popularCategories = [
     { name: "League of Legends", icon: Trophy, href: "/categories" },
@@ -56,6 +72,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      <Navbar />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 py-16 md:py-24">
@@ -121,11 +138,15 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold">Anúncios Recentes</h2>
+              <h2 className="text-3xl font-bold">
+                {searchQuery ? `Resultados para "${searchQuery}"` : "Anúncios Recentes"}
+              </h2>
               <p className="mt-2 text-muted-foreground">
-                {listings.length > 0 
-                  ? "Confira os anúncios mais recentes" 
-                  : "Seja o primeiro a criar um anúncio!"}
+                {searchQuery 
+                  ? `${listings.length} ${listings.length === 1 ? "resultado encontrado" : "resultados encontrados"}`
+                  : listings.length > 0 
+                    ? "Confira os anúncios mais recentes" 
+                    : "Seja o primeiro a criar um anúncio!"}
               </p>
             </div>
             {listings.length > 0 && (
