@@ -35,6 +35,12 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden items-center space-x-4 md:flex">
+            <Link to="/blog">
+              <Button variant="ghost">Blog</Button>
+            </Link>
+            <Link to="/suggestions">
+              <Button variant="ghost">Sugestões</Button>
+            </Link>
             <Link to="/how-to-sell">
               <Button variant="ghost">Como Vender</Button>
             </Link>
@@ -82,6 +88,16 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="border-t border-border bg-background md:hidden">
           <div className="container mx-auto space-y-2 px-4 py-4">
+            <Link to="/blog" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start">
+                Blog
+              </Button>
+            </Link>
+            <Link to="/suggestions" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start">
+                Sugestões
+              </Button>
+            </Link>
             <Link to="/how-to-sell" onClick={() => setMobileMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start">
                 Como Vender
