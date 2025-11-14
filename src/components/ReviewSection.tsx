@@ -9,10 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 interface Review {
   id: string;
   rating: number;
-  comment: string;
+  comment: string | null;
   created_at: string;
-  user_id?: string;
-  reviewer_id?: string;
 }
 
 interface ReviewSectionProps {
@@ -41,7 +39,7 @@ export const ReviewSection = ({ type, targetId, currentUserId }: ReviewSectionPr
     try {
       const { data, error } = await supabase
         .from(tableName)
-        .select("*")
+        .select("id, rating, comment, created_at")
         .eq(targetColumn, targetId)
         .order("created_at", { ascending: false });
 
@@ -70,18 +68,29 @@ export const ReviewSection = ({ type, targetId, currentUserId }: ReviewSectionPr
     setSubmitting(true);
 
     try {
-      const reviewData = {
-        [targetColumn]: targetId,
-        rating,
-        comment: comment.trim() || null,
-        ...(type === "listing" ? { user_id: currentUserId } : { reviewer_id: currentUserId })
-      };
+      if (type === "listing") {
+        const { error } = await supabase
+          .from("listing_reviews")
+          .insert({
+            listing_id: targetId,
+            user_id: currentUserId,
+            rating,
+            comment: comment.trim() || null
+          });
 
-      const { error } = await supabase
-        .from(tableName)
-        .insert(reviewData);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("seller_reviews")
+          .insert({
+            seller_id: targetId,
+            reviewer_id: currentUserId,
+            rating,
+            comment: comment.trim() || null
+          });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       toast({ title: "Sucesso!", description: "Avaliação enviada" });
       setRating(0);
