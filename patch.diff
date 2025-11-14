@@ -130,7 +130,7 @@ return new Response(JSON.stringify({ account, link }), { headers: { 'Content-Typ
 console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +});
-*** End Patch *** Begin Patch *** Add File: edge-functions/create-payment-intent/index.ts +// Edge Function: create-payment-intent +// Creates a Stripe payment intent for a listing purchase. +console.info('create-payment-intent starting'); +Deno.serve(async (req: Request) => {***
+*** End File: edge-functions/onboard-seller/index.ts *** File: edge-functions/create-payment-intent/index.ts *** Add File Mode: 100644 +// Edge Function: create-payment-intent +// Creates a Stripe payment intent for a listing purchase. +console.info('create-payment-intent starting'); +Deno.serve(async (req: Request) => {***
 
 try {
 const stripeSecret = Deno.env.get('STRIPE_SECRET');
