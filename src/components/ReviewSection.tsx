@@ -37,16 +37,23 @@ export const ReviewSection = ({ type, targetId, currentUserId }: ReviewSectionPr
 
   const fetchReviews = async () => {
     try {
-      const query = supabase
-        .from(tableName)
-        .select("id, rating, comment, created_at")
-        .eq(targetColumn, targetId)
-        .order("created_at", { ascending: false });
+      let result;
+      if (type === "listing") {
+        result = await supabase
+          .from("listing_reviews")
+          .select("id, rating, comment, created_at")
+          .eq("listing_id", targetId)
+          .order("created_at", { ascending: false });
+      } else {
+        result = await supabase
+          .from("seller_reviews")
+          .select("id, rating, comment, created_at")
+          .eq("seller_id", targetId)
+          .order("created_at", { ascending: false });
+      }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setReviews(data || []);
+      if (result.error) throw result.error;
+      setReviews(result.data || []);
     } catch (error: any) {
       console.error("Erro ao carregar avaliações:", error);
     } finally {
