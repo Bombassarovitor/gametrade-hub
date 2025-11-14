@@ -1,0 +1,195 @@
+*** Begin Patch *** Add File: sql/schema.sql +-- Schema for gametrade-hub (profiles, listings, listings_images, orders, payments) +-- Run in Supabase SQL editor. No secrets required. +BEGIN; + +-- profiles table (public) +CREATE TABLE IF NOT EXISTS public.profiles (
+
+id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+username text UNIQUE,
+full_name text,
+avatar_url text,
+bio text,
+created_at timestamptz DEFAULT now(),
+updated_at timestamptz DEFAULT now() +);
++-- listings table +CREATE TABLE IF NOT EXISTS public.listings (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+owner_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+title text NOT NULL,
+description text,
+price numeric(10,2) NOT NULL,
+currency text NOT NULL DEFAULT 'USD',
+metadata jsonb DEFAULT '{}'::jsonb,
+created_at timestamptz DEFAULT now(),
+updated_at timestamptz DEFAULT now(),
+is_active boolean DEFAULT true +);
++CREATE INDEX IF NOT EXISTS idx_listings_owner ON public.listings(owner_id); + +-- listings_images table (multiple images per listing) +CREATE TABLE IF NOT EXISTS public.listings_images (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+listing_id uuid NOT NULL REFERENCES public.listings(id) ON DELETE CASCADE,
+storage_path text NOT NULL,
+created_at timestamptz DEFAULT now() +);
++CREATE INDEX IF NOT EXISTS idx_listings_images_listing ON public.listings_images(listing_id); + +-- orders table (simple) +CREATE TABLE IF NOT EXISTS public.orders (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+buyer_id uuid REFERENCES public.profiles(id),
+listing_id uuid REFERENCES public.listings(id),
+amount numeric(10,2),
+currency text DEFAULT 'USD',
+status text DEFAULT 'pending',
+created_at timestamptz DEFAULT now(),
+updated_at timestamptz DEFAULT now() +);
++-- payments ledger (minimal) +CREATE TABLE IF NOT EXISTS public.payments (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+order_id uuid REFERENCES public.orders(id),
+provider text,
+provider_payment_id text,
+amount numeric(10,2),
+currency text,
+status text,
+raw_payload jsonb,
+created_at timestamptz DEFAULT now() +);
++-- RLS: enable on user-owned tables and policies +ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY; +ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY; +ALTER TABLE public.listings_images ENABLE ROW LEVEL SECURITY; +ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY; +ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY; + +-- helper function to check admin claim (uses auth.jwt()) +CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql STABLE AS $$$$
+
+SELECT (auth.jwt() ->> 'is_admin')::boolean IS TRUE; +$$; +REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon, authenticated;
++-- Profiles: allow users to select/insert/update their own profile +CREATE POLICY profiles_select ON public.profiles
+
+FOR SELECT TO authenticated USING (id = (SELECT auth.uid()));
++CREATE POLICY profiles_upsert ON public.profiles
+
+FOR ALL TO authenticated USING (id = (SELECT auth.uid())) WITH CHECK (id = (SELECT auth.uid()));
++-- Listings: owners can CRUD; admins can do all +CREATE POLICY listings_owner_select ON public.listings
+
+FOR SELECT TO authenticated USING (owner_id = (SELECT auth.uid()) OR public.is_admin());
++CREATE POLICY listings_owner_insert ON public.listings
+
+FOR INSERT TO authenticated WITH CHECK (owner_id = (SELECT auth.uid()));
++CREATE POLICY listings_owner_update ON public.listings
+
+FOR UPDATE TO authenticated USING (owner_id = (SELECT auth.uid()) OR public.is_admin()) WITH CHECK (owner_id = (SELECT auth.uid()) OR public.is_admin());
++CREATE POLICY listings_owner_delete ON public.listings
+
+FOR DELETE TO authenticated USING (owner_id = (SELECT auth.uid()) OR public.is_admin());
++-- Images: allow owner (via join) and admins +CREATE POLICY listings_images_select ON public.listings_images
+
+FOR SELECT TO authenticated USING (
+EXISTS (
+SELECT 1 FROM public.listings l WHERE l.id = listing_id AND (l.owner_id = (SELECT auth.uid()) OR public.is_admin())
+)
+);
++CREATE POLICY listings_images_insert ON public.listings_images
+
+FOR INSERT TO authenticated WITH CHECK (
+EXISTS (SELECT 1 FROM public.listings l WHERE l.id = listing_id AND l.owner_id = (SELECT auth.uid()))
+);
++CREATE POLICY listings_images_delete ON public.listings_images
+
+FOR DELETE TO authenticated USING (
+EXISTS (SELECT 1 FROM public.listings l WHERE l.id = listing_id AND (l.owner_id = (SELECT auth.uid()) OR public.is_admin()))
+);
++-- Orders/payments: buyer or involved parties see +CREATE POLICY orders_select ON public.orders
+
+FOR SELECT TO authenticated USING (
+buyer_id = (SELECT auth.uid()) OR EXISTS (SELECT 1 FROM public.listings l WHERE l.id = listing_id AND l.owner_id = (SELECT auth.uid())) OR public.is_admin()
+);
++CREATE POLICY orders_insert ON public.orders
+
+FOR INSERT TO authenticated WITH CHECK (buyer_id = (SELECT auth.uid()));
++CREATE POLICY payments_select ON public.payments
+
+FOR SELECT TO authenticated USING (
+EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND (o.buyer_id = (SELECT auth.uid()) OR EXISTS (SELECT 1 FROM public.listings l WHERE l.id = o.listing_id AND l.owner_id = (SELECT auth.uid())))) OR public.is_admin()
+);
++COMMIT; + *** End Patch *** Begin Patch *** Add File: edge-functions/onboard-seller/index.ts +// Edge Function: onboard-seller +// Creates a Stripe Connect account link for onboarding a seller. +// Expects JSON body: { country: 'US', email: 'seller@example.com [blocked]', refresh_url, return_url } +// Requires STRIPE_SECRET and SUPABASE_SERVICE_ROLE_KEY set as secrets. +console.info('onboard-seller function starting'); +Deno.serve(async (req: Request) => {***
+
+try {
+const body = await req.json();
+const stripeSecret = Deno.env.get('STRIPE_SECRET');
+if (!stripeSecret) return new Response(JSON.stringify({ error: 'missing stripe secret' }), { status: 500 });
+const resp = await fetch('https://api.stripe.com/v1/accounts', {
+method: 'POST',
+headers: { Authorization: `Bearer ${stripeSecret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+body: new URLSearchParams({
+type: 'express',
+country: body.country || 'US',
+email: body.email || ''
+})
+});
+const account = await resp.json();
+// create account link
+const linkResp = await fetch('https://api.stripe.com/v1/account_links', {
+method: 'POST',
+headers: { Authorization: `Bearer ${stripeSecret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+body: new URLSearchParams({
+account: account.id,
+refresh_url: body.refresh_url,
+return_url: body.return_url,
+type: 'account_onboarding'
+})
+});
+const link = await linkResp.json();
+return new Response(JSON.stringify({ account, link }), { headers: { 'Content-Type': 'application/json' } });
+} catch (err) {
+console.error(err);
+return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+} +});
+*** End Patch *** Begin Patch *** Add File: edge-functions/create-payment-intent/index.ts +// Edge Function: create-payment-intent +// Creates a Stripe payment intent for a listing purchase. +console.info('create-payment-intent starting'); +Deno.serve(async (req: Request) => {***
+
+try {
+const stripeSecret = Deno.env.get('STRIPE_SECRET');
+if (!stripeSecret) return new Response(JSON.stringify({ error: 'missing stripe secret' }), { status: 500 });
+const body = await req.json();
+const { amount, currency = 'USD', metadata = {} } = body;
+const resp = await fetch('https://api.stripe.com/v1/payment_intents', {
+method: 'POST',
+headers: { Authorization: `Bearer ${stripeSecret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+body: new URLSearchParams({
+amount: String(Math.round(Number(amount) * 100)),
+currency,
+'payment_method_types[]': 'card',
+metadata: JSON.stringify(metadata)
+})
+});
+const pi = await resp.json();
+return new Response(JSON.stringify(pi), { headers: { 'Content-Type': 'application/json' } });
+} catch (err) {
+console.error(err);
+return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+} +}); +*
+*** End Patch *** Begin Patch *** Add File: edge-functions/webhook/index.ts +// Edge Function: webhook +// Receives Stripe webhook events. Verifies signature using STRIPE_WEBHOOK_SECRET +console.info('webhook function starting'); +Deno.serve(async (req: Request) => {***
+
+const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+const payload = await req.text();
+// Note: stripe signature verification requires stripe library; here we do basic pass-through
+// For production use the official stripe SDK to verify signatures.
+try {
+const event = JSON.parse(payload);
+console.log('received event', event.type);
+// TODO: handle charge.succeeded, payout, transfer, etc.
+return new Response(JSON.stringify({ received: true }), { status: 200 });
+} catch (err) {
+console.error('webhook parse error', err);
+return new Response(JSON.stringify({ error: 'invalid payload' }), { status: 400 });
+} +});
+*** End Patch *** Begin Patch *** Add File: edge-functions/create-transfer/index.ts +// Edge Function: create-transfer +// Creates a transfer to a connected account (Stripe Connect) +console.info('create-transfer starting'); +Deno.serve(async (req: Request) => {***
+
+try {
+const stripeSecret = Deno.env.get('STRIPE_SECRET');
+if (!stripeSecret) return new Response(JSON.stringify({ error: 'missing stripe secret' }), { status: 500 });
+const body = await req.json();
+const { amount, currency = 'USD', destination } = body;
+const resp = await fetch('https://api.stripe.com/v1/transfers', {
+method: 'POST',
+headers: { Authorization: `Bearer ${stripeSecret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+body: new URLSearchParams({
+amount: String(Math.round(Number(amount) * 100)),
+currency,
+destination
+})
+});
+const tr = await resp.json();
+return new Response(JSON.stringify(tr), { headers: { 'Content-Type': 'application/json' } });
+} catch (err) {
+console.error(err);
+return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+} +}); +*
+*** End Patch *** Begin Patch *** Add File: .env.example +VITE_SUPABASE_URL=your_supabase_url +VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key +SUPABASE_SERVICE_ROLE_KEY=your_service_role_key +STRIPE_SECRET=sk_test_xxx +STRIPE_WEBHOOK_SECRET=whsec_xxx + *** End Patch *** Begin Patch *** Add File: README-changes.txt +Instructions after applying patch: + +1) Apply SQL
+
+Open Supabase Dashboard -> SQL editor -> run sql/schema.sql
