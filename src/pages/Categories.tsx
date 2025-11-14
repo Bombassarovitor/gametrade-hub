@@ -4,12 +4,12 @@ import { Gamepad2, Trophy, Sword, Shield, Coins, Users } from "lucide-react";
 
 const Categories = () => {
   const categories = [
-    { name: "League of Legends", icon: Trophy, itemCount: 2500, color: "text-primary", href: "/category/league-of-legends" },
-    { name: "Valorant", icon: Sword, itemCount: 1800, color: "text-accent", href: "/category/valorant" },
-    { name: "CS2", icon: Shield, itemCount: 3200, color: "text-warning", href: "/category/cs2" },
-    { name: "Free Fire", icon: Gamepad2, itemCount: 4100, color: "text-success", href: "/category/free-fire" },
-    { name: "Genshin Impact", icon: Coins, itemCount: 1500, color: "text-destructive", href: "/category/genshin" },
-    { name: "Mobile Legends", icon: Users, itemCount: 2100, color: "text-primary", href: "/category/mobile-legends" },
+    { name: "League of Legends", icon: Trophy, color: "text-primary", href: "/categories" },
+    { name: "Valorant", icon: Sword, color: "text-accent", href: "/categories" },
+    { name: "CS2", icon: Shield, color: "text-warning", href: "/categories" },
+    { name: "Free Fire", icon: Gamepad2, color: "text-success", href: "/categories" },
+    { name: "Genshin Impact", icon: Coins, color: "text-destructive", href: "/categories" },
+    { name: "Mobile Legends", icon: Users, color: "text-primary", href: "/categories" },
   ];
 
   return (
@@ -37,7 +37,7 @@ const Categories = () => {
                       {category.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {category.itemCount} itens disponíveis
+                      Explore anúncios
                     </p>
                   </div>
                 </CardContent>
