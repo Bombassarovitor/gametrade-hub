@@ -190,6 +190,4 @@ return new Response(JSON.stringify(tr), { headers: { 'Content-Type': 'applicatio
 console.error(err);
 return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 } +}); +*
-*** End Patch *** Begin Patch *** Add File: .env.example +VITE_SUPABASE_URL=your_supabase_url +VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key +SUPABASE_SERVICE_ROLE_KEY=your_service_role_key +STRIPE_SECRET=sk_test_xxx +STRIPE_WEBHOOK_SECRET=whsec_xxx + *** End Patch *** Begin Patch *** Add File: README-changes.txt +Instructions after applying patch: + +1) Apply SQL
-
-Open Supabase Dashboard -> SQL editor -> run sql/schema.sql
+*** End File: edge-functions/create-transfer/index.ts *** File: .env.example *** Add File Mode: 100644 +VITE_SUPABASE_URL=your_supabase_url +VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key +SUPABASE_SERVICE_ROLE_KEY=your_service_role_key +STRIPE_SECRET=sk_test_xxx +STRIPE_WEBHOOK_SECRET=whsec_xxx + *** End File: .env.example *** File: README-changes.txt *** Add File Mode: 100644 +Instructions after applying patch: + +1) Apply SQL
