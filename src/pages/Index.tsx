@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
+import Navbar from "@/components/Navbar";
 import {
   Gamepad2,
   Trophy,
@@ -24,9 +25,14 @@ const Index = () => {
   const searchQuery = searchParams.get("search") || "";
 
   useEffect(() => {
-    const fetchListings = async () => {
-      const { data, error } = await supabase
-        .from('listings')
+    fetchListings();
+  }, [searchQuery]);
+
+  const fetchListings = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("listings")
         .select(`
           *,
           profiles:user_id (
@@ -34,18 +40,26 @@ const Index = () => {
             avatar_url
           )
         `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(8);
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (searchQuery) {
+        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,game_category.ilike.%${searchQuery}%`);
+      } else {
+        query = query.limit(8);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         setListings(data);
       }
+    } catch (error) {
+      console.error("Erro ao buscar anúncios:", error);
+    } finally {
       setLoading(false);
-    };
-
-    fetchListings();
-  }, []);
+    }
+  };
 
   const popularCategories = [
     { name: "League of Legends", icon: Trophy, href: "/categories" },
@@ -58,6 +72,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      <Navbar />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 py-16 md:py-24">
