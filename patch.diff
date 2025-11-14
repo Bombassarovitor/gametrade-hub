@@ -168,7 +168,7 @@ return new Response(JSON.stringify({ received: true }), { status: 200 });
 console.error('webhook parse error', err);
 return new Response(JSON.stringify({ error: 'invalid payload' }), { status: 400 });
 } +});
-*** End Patch *** Begin Patch *** Add File: edge-functions/create-transfer/index.ts +// Edge Function: create-transfer +// Creates a transfer to a connected account (Stripe Connect) +console.info('create-transfer starting'); +Deno.serve(async (req: Request) => {***
+*** End File: edge-functions/webhook/index.ts *** File: edge-functions/create-transfer/index.ts *** Add File Mode: 100644 +// Edge Function: create-transfer +// Creates a transfer to a connected account (Stripe Connect) +console.info('create-transfer starting'); +Deno.serve(async (req: Request) => {***
 
 try {
 const stripeSecret = Deno.env.get('STRIPE_SECRET');
